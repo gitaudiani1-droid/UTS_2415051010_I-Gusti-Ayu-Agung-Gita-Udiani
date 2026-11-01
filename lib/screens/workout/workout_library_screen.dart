@@ -24,6 +24,57 @@ class _WorkoutLibraryScreenState extends State<WorkoutLibraryScreen> {
     });
   }
 
+  Widget _buildSearchField() {
+    return TextField(
+      onChanged: (value) {
+        setState(() {
+          searchQuery = value;
+        });
+      },
+      decoration: InputDecoration(
+        hintText: 'Search exercises...',
+        prefixIcon: const Icon(Icons.search),
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBodyPartFilter(List<String> bodyParts) {
+    return DropdownButtonFormField<String>(
+      initialValue: selectedBodyPart,
+      decoration: InputDecoration(
+        labelText: 'Filter by body part',
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+      ),
+      items: [
+        const DropdownMenuItem(
+          value: 'All',
+          child: Text('All Body Parts'),
+        ),
+        ...bodyParts.map(
+              (part) => DropdownMenuItem(
+            value: part,
+            child: Text(part),
+          ),
+        ),
+      ],
+      onChanged: (value) {
+        setState(() {
+          selectedBodyPart = value ?? 'All';
+        });
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -37,7 +88,9 @@ class _WorkoutLibraryScreenState extends State<WorkoutLibraryScreen> {
       body: Consumer<ExerciseProvider>(
         builder: (context, provider, child) {
           if (provider.isLoading && provider.exercises.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
           }
 
           if (provider.errorMessage != null &&
@@ -75,114 +128,131 @@ class _WorkoutLibraryScreenState extends State<WorkoutLibraryScreen> {
             return matchesSearch && matchesBodyPart;
           }).toList();
 
-          return Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    TextField(
-                      onChanged: (value) {
-                        setState(() {
-                          searchQuery = value;
-                        });
-                      },
-                      decoration: InputDecoration(
-                        hintText: 'Search exercises...',
-                        prefixIcon: const Icon(Icons.search),
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final isWideScreen = constraints.maxWidth >= 600;
+
+              return Column(
+                children: [
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: isWideScreen ? 8 : 16,
                     ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
-                      initialValue: selectedBodyPart,
-                      decoration: InputDecoration(
-                        labelText: 'Filter by body part',
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
+                    child: isWideScreen
+                        ? Row(
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: _buildSearchField(),
                         ),
-                      ),
-                      items: [
-                        const DropdownMenuItem(
-                          value: 'All',
-                          child: Text('All Body Parts'),
-                        ),
-                        ...bodyParts.map(
-                              (part) => DropdownMenuItem(
-                            value: part,
-                            child: Text(part),
-                          ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildBodyPartFilter(bodyParts),
                         ),
                       ],
-                      onChanged: (value) {
-                        setState(() {
-                          selectedBodyPart = value ?? 'All';
-                        });
-                      },
+                    )
+                        : Column(
+                      children: [
+                        _buildSearchField(),
+                        const SizedBox(height: 12),
+                        _buildBodyPartFilter(bodyParts),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: filteredExercises.isEmpty
-                    ? const Center(
-                  child: Text('No exercises found.'),
-                )
-                    : RefreshIndicator(
-                  onRefresh: provider.loadExercises,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                    ),
-                    itemCount: filteredExercises.length,
-                    itemBuilder: (context, index) {
-                      final exercise = filteredExercises[index];
-
-                      return Card(
-                        color: Colors.white,
-                        margin: const EdgeInsets.only(bottom: 12),
-                        child: ListTile(
-                          leading: const CircleAvatar(
-                            backgroundColor: Color(0xFFF5A9C8),
-                            child: Icon(
-                              Icons.fitness_center,
-                              color: Colors.white,
-                            ),
-                          ),
-                          title: Text(
-                            exercise.name,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          subtitle: Text(
-                            '${exercise.bodyPart} • ${exercise.equipment}',
-                          ),
-                          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => ExerciseDetailScreen(
-                                  exercise: exercise,
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      );
-                    },
                   ),
-                ),
+                  Expanded(
+                    child: filteredExercises.isEmpty
+                        ? const Center(
+                      child: Text('No exercises found.'),
+                    )
+                        : RefreshIndicator(
+                      onRefresh: provider.loadExercises,
+                      child: isWideScreen
+                          ? GridView.builder(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                        gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          childAspectRatio: 3.2,
+                        ),
+                        itemCount: filteredExercises.length,
+                        itemBuilder: (context, index) {
+                          final exercise =
+                          filteredExercises[index];
+
+                          return _buildExerciseCard(
+                            context,
+                            exercise,
+                          );
+                        },
+                      )
+                          : ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                        itemCount: filteredExercises.length,
+                        itemBuilder: (context, index) {
+                          final exercise =
+                          filteredExercises[index];
+
+                          return Padding(
+                            padding:
+                            const EdgeInsets.only(bottom: 12),
+                            child: _buildExerciseCard(
+                              context,
+                              exercise,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildExerciseCard(BuildContext context, dynamic exercise) {
+    return Card(
+      color: Colors.white,
+      margin: EdgeInsets.zero,
+      child: ListTile(
+        leading: const CircleAvatar(
+          backgroundColor: Color(0xFFF5A9C8),
+          child: Icon(
+            Icons.fitness_center,
+            color: Colors.white,
+          ),
+        ),
+        title: Text(
+          exercise.name,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: Text(
+          '${exercise.bodyPart} • ${exercise.equipment}',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        trailing: const Icon(
+          Icons.arrow_forward_ios,
+          size: 16,
+        ),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ExerciseDetailScreen(
+                exercise: exercise,
               ),
-            ],
+            ),
           );
         },
       ),
