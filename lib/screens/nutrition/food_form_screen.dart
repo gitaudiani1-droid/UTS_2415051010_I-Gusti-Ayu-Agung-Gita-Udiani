@@ -6,10 +6,16 @@ import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
 
 class FoodFormScreen extends StatefulWidget {
-  const FoodFormScreen({super.key});
+  final FoodLog? food;
+
+  const FoodFormScreen({
+    super.key,
+    this.food,
+  });
 
   @override
-  State<FoodFormScreen> createState() => _FoodFormScreenState();
+  State<FoodFormScreen> createState() =>
+      _FoodFormScreenState();
 }
 
 class _FoodFormScreenState extends State<FoodFormScreen> {
@@ -24,6 +30,24 @@ class _FoodFormScreenState extends State<FoodFormScreen> {
   String _mealType = 'Breakfast';
   bool _isSaving = false;
 
+  bool get _isEditing => widget.food != null;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final food = widget.food;
+
+    if (food != null) {
+      _foodNameController.text = food.foodName;
+      _caloriesController.text = food.calories.toString();
+      _proteinController.text = food.protein.toString();
+      _carbsController.text = food.carbohydrates.toString();
+      _fatController.text = food.fat.toString();
+      _mealType = food.mealType;
+    }
+  }
+
   @override
   void dispose() {
     _foodNameController.dispose();
@@ -34,7 +58,6 @@ class _FoodFormScreenState extends State<FoodFormScreen> {
     super.dispose();
   }
 
-  // Validasi input angka
   String? _validateNumber(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'Bagian ini wajib diisi';
@@ -42,14 +65,21 @@ class _FoodFormScreenState extends State<FoodFormScreen> {
 
     final number = double.tryParse(value);
 
-    if (number == null || number < 0) {
+    if (number == null || !number.isFinite || number < 0) {
       return 'Masukkan angka yang valid (minimal 0)';
     }
 
     return null;
   }
 
-  // Menyimpan data makanan
+  String? _validateFoodName(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Nama makanan wajib diisi';
+    }
+
+    return null;
+  }
+
   Future<void> _saveFood() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -58,26 +88,33 @@ class _FoodFormScreenState extends State<FoodFormScreen> {
     });
 
     final foodLog = FoodLog(
+      id: widget.food?.id,
       foodName: _foodNameController.text.trim(),
       calories: double.parse(_caloriesController.text),
       protein: double.parse(_proteinController.text),
       carbohydrates: double.parse(_carbsController.text),
       fat: double.parse(_fatController.text),
       mealType: _mealType,
-      consumedAt: DateTime.now(),
+      consumedAt: widget.food?.consumedAt ?? DateTime.now(),
     );
 
     try {
-      final success = await context
-          .read<NutritionProvider>()
-          .addFoodLog(foodLog);
+      final provider = context.read<NutritionProvider>();
+
+      final success = _isEditing
+          ? await provider.updateFoodLog(foodLog)
+          : await provider.addFoodLog(foodLog);
 
       if (!mounted) return;
 
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Makanan berhasil disimpan!'),
+          SnackBar(
+            content: Text(
+              _isEditing
+                  ? 'Makanan berhasil diperbarui!'
+                  : 'Makanan berhasil disimpan!',
+            ),
             backgroundColor: Colors.green,
           ),
         );
@@ -87,7 +124,7 @@ class _FoodFormScreenState extends State<FoodFormScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              context.read<NutritionProvider>().errorMessage ??
+              provider.errorMessage ??
                   'Gagal menyimpan makanan.',
             ),
             backgroundColor: Colors.red,
@@ -112,7 +149,6 @@ class _FoodFormScreenState extends State<FoodFormScreen> {
     }
   }
 
-  // Widget reusable untuk input form
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
@@ -138,12 +174,7 @@ class _FoodFormScreenState extends State<FoodFormScreen> {
           isNumber: isNumber,
           validator: isNumber
               ? _validateNumber
-              : (value) {
-            if (value == null || value.trim().isEmpty) {
-              return 'Nama makanan wajib diisi';
-            }
-            return null;
-          },
+              : _validateFoodName,
         ),
       ],
     );
@@ -154,7 +185,7 @@ class _FoodFormScreenState extends State<FoodFormScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFFFF4F8),
       appBar: AppBar(
-        title: const Text('Add Food'),
+        title: Text(_isEditing ? 'Edit Food' : 'Add Food'),
         backgroundColor: const Color(0xFFFFF4F8),
         elevation: 0,
       ),
@@ -263,10 +294,11 @@ class _FoodFormScreenState extends State<FoodFormScreen> {
                 }
               },
             ),
+
             const SizedBox(height: 28),
 
             CustomButton(
-              text: 'Save Food',
+              text: _isEditing ? 'Update Food' : 'Save Food',
               icon: Icons.save,
               isLoading: _isSaving,
               onPressed: _saveFood,

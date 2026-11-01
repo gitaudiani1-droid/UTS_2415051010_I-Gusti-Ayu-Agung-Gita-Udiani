@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/nutrition_provider.dart';
+import '../../models/food_log.dart';
 import 'food_form_screen.dart';
 
 class NutritionDashboardScreen extends StatefulWidget {
@@ -13,7 +14,6 @@ class NutritionDashboardScreen extends StatefulWidget {
 
 class _NutritionDashboardScreenState
     extends State<NutritionDashboardScreen> {
-
   @override
   void initState() {
     super.initState();
@@ -21,6 +21,67 @@ class _NutritionDashboardScreenState
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<NutritionProvider>().loadFoodLogs();
     });
+  }
+
+  Future<void> _openFoodForm({FoodLog? food}) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => FoodFormScreen(food: food),
+      ),
+    );
+
+    if (!mounted) return;
+    await context.read<NutritionProvider>().loadFoodLogs();
+  }
+
+  Future<void> _deleteFood(FoodLog food) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Hapus Food Log?'),
+        content: Text(
+          'Apakah kamu yakin ingin menghapus "${food.foodName}"?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () =>
+                Navigator.pop(dialogContext, false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () =>
+                Navigator.pop(dialogContext, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    final success = await context
+        .read<NutritionProvider>()
+        .deleteFoodLog(food.id!);
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          success
+              ? 'Food log berhasil dihapus!'
+              : context.read<NutritionProvider>().errorMessage ??
+              'Gagal menghapus food log.',
+        ),
+        backgroundColor:
+        success ? Colors.green : Colors.red,
+      ),
+    );
   }
 
   @override
@@ -46,19 +107,23 @@ class _NutritionDashboardScreenState
           }).toList();
 
           final totalCalories = todayLogs.fold<double>(
-            0, (sum, food) => sum + food.calories,
+            0,
+                (sum, food) => sum + food.calories,
           );
 
           final totalProtein = todayLogs.fold<double>(
-            0, (sum, food) => sum + food.protein,
+            0,
+                (sum, food) => sum + food.protein,
           );
 
           final totalCarbs = todayLogs.fold<double>(
-            0, (sum, food) => sum + food.carbohydrates,
+            0,
+                (sum, food) => sum + food.carbohydrates,
           );
 
           final totalFat = todayLogs.fold<double>(
-            0, (sum, food) => sum + food.fat,
+            0,
+                (sum, food) => sum + food.fat,
           );
 
           if (provider.isLoading && provider.foodLogs.isEmpty) {
@@ -75,7 +140,10 @@ class _NutritionDashboardScreenState
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.error_outline, size: 48),
+                    const Icon(
+                      Icons.error_outline,
+                      size: 48,
+                    ),
                     const SizedBox(height: 12),
                     Text(provider.errorMessage!),
                     const SizedBox(height: 12),
@@ -109,7 +177,7 @@ class _NutritionDashboardScreenState
                 ),
                 const SizedBox(height: 20),
 
-                // Kalori
+                // Total Calories
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -122,7 +190,8 @@ class _NutritionDashboardScreenState
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment:
+                    CrossAxisAlignment.start,
                     children: [
                       const Text(
                         'Total Calories',
@@ -150,7 +219,6 @@ class _NutritionDashboardScreenState
 
                 const SizedBox(height: 20),
 
-                // Makronutrisi
                 const Text(
                   'Macronutrients',
                   style: TextStyle(
@@ -164,7 +232,8 @@ class _NutritionDashboardScreenState
                 GridView.count(
                   crossAxisCount: 2,
                   shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
+                  physics:
+                  const NeverScrollableScrollPhysics(),
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
                   childAspectRatio: 1.7,
@@ -195,31 +264,23 @@ class _NutritionDashboardScreenState
                     ),
                   ],
                 ),
+
                 const SizedBox(height: 24),
 
                 SizedBox(
                   width: double.infinity,
                   height: 52,
                   child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const FoodFormScreen(),
-                        ),
-                      ).then((_) {
-                        if (context.mounted) {
-                          context.read<NutritionProvider>().loadFoodLogs();
-                        }
-                      });
-                    },
+                    onPressed: () => _openFoodForm(),
                     icon: const Icon(Icons.add),
                     label: const Text('Add Food'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFF5A9C8),
+                      backgroundColor:
+                      const Color(0xFFF5A9C8),
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius:
+                        BorderRadius.circular(16),
                       ),
                     ),
                   ),
@@ -269,11 +330,51 @@ class _NutritionDashboardScreenState
                           '${food.mealType} • '
                               '${food.protein.toStringAsFixed(0)}g protein',
                         ),
-                        trailing: Text(
-                          '${food.calories.toStringAsFixed(0)} kcal',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '${food.calories.toStringAsFixed(0)} kcal',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            PopupMenuButton<String>(
+                              onSelected: (value) {
+                                if (value == 'edit') {
+                                  _openFoodForm(food: food);
+                                } else if (value == 'delete') {
+                                  _deleteFood(food);
+                                }
+                              },
+                              itemBuilder: (context) => [
+                                const PopupMenuItem(
+                                  value: 'edit',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.edit, size: 18),
+                                      SizedBox(width: 8),
+                                      Text('Edit'),
+                                    ],
+                                  ),
+                                ),
+                                const PopupMenuItem(
+                                  value: 'delete',
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.delete,
+                                        color: Colors.red,
+                                        size: 18,
+                                      ),
+                                      SizedBox(width: 8),
+                                      Text('Hapus'),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
                     ),
