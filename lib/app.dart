@@ -3,19 +3,49 @@ import 'package:provider/provider.dart';
 import 'providers/exercise_provider.dart';
 import 'repositories/exercise_repository.dart';
 import 'services/exercise_api_service.dart';
+import 'providers/workout_provider.dart';
+import 'repositories/workout_repository.dart';
+import 'services/supabase_service.dart';
+import 'providers/nutrition_provider.dart';
+import 'repositories/nutrition_repository.dart';
+import 'services/nutrition_service.dart';
+import 'screens/main_navigation_screen.dart';
+import 'providers/nutrition_goal_provider.dart';
+import 'repositories/nutrition_goal_repository.dart';
+import 'services/nutrition_goal_service.dart';
 
 class GlowFitApp extends StatelessWidget {
   const GlowFitApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(
           create: (_) => ExerciseProvider(
             repository: ExerciseRepository(
               apiService: ExerciseApiService(),
+            ),
+          ),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => WorkoutProvider(
+            repository: WorkoutRepository(
+              supabaseService: SupabaseService(),
+            ),
+          ),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => NutritionProvider(
+            repository: NutritionRepository(
+              nutritionService: NutritionService(),
+            ),
+          ),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => NutritionGoalProvider(
+            repository: NutritionGoalRepository(
+              service: NutritionGoalService(),
             ),
           ),
         ),
@@ -31,18 +61,7 @@ class GlowFitApp extends StatelessWidget {
           ),
           scaffoldBackgroundColor: const Color(0xFFFFF4F8),
         ),
-        home: const Scaffold(
-          body: Center(
-            child: Text(
-              'Welcome to GLOWFIT ✨',
-              style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFFA99BEF),
-              ),
-            ),
-          ),
-        ),
+        home: const MainNavigationScreen(),
       ),
     );
   }
