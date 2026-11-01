@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/workout_provider.dart';
 import '../../providers/nutrition_provider.dart';
+import '../../widgets/summary_card.dart';
 
 class HomeScreen extends StatefulWidget {
   final ValueChanged<int>? onNavigate;
@@ -146,24 +147,23 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 const SizedBox(height: 15),
 
-                // Summary cards
                 Row(
                   children: [
                     Expanded(
-                      child: _summaryCard(
-                        title: 'Workouts',
-                        value: '$todayWorkouts',
-                        unit: 'sessions',
+                      child: SummaryCard(
+                        title: 'Workouts Today',
+                        value: todayWorkouts.toString(),
+                        subtitle: 'Keep it up!',
                         icon: Icons.fitness_center,
                         color: const Color(0xFFA99BEF),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: _summaryCard(
-                        title: 'Calories',
+                      child: SummaryCard(
+                        title: 'Calories Today',
                         value: todayCalories.toStringAsFixed(0),
-                        unit: 'kcal',
+                        subtitle: 'kcal consumed',
                         icon: Icons.local_fire_department,
                         color: const Color(0xFFF5A9C8),
                       ),
@@ -209,49 +209,6 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           },
         ),
-      ),
-    );
-  }
-
-  Widget _summaryCard({
-    required String title,
-    required String value,
-    required String unit,
-    required IconData icon,
-    required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: color, size: 27),
-          const SizedBox(height: 12),
-          Text(
-            title,
-            style: const TextStyle(color: Colors.grey),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF30283D),
-            ),
-          ),
-          Text(
-            unit,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Colors.grey,
-            ),
-          ),
-        ],
       ),
     );
   }
