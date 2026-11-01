@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/food_log.dart';
 import '../../providers/nutrition_provider.dart';
+import '../../widgets/custom_button.dart';
+import '../../widgets/custom_text_field.dart';
 
 class FoodFormScreen extends StatefulWidget {
   const FoodFormScreen({super.key});
@@ -32,6 +34,22 @@ class _FoodFormScreenState extends State<FoodFormScreen> {
     super.dispose();
   }
 
+  // Validasi input angka
+  String? _validateNumber(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Bagian ini wajib diisi';
+    }
+
+    final number = double.tryParse(value);
+
+    if (number == null || number < 0) {
+      return 'Masukkan angka yang valid (minimal 0)';
+    }
+
+    return null;
+  }
+
+  // Menyimpan data makanan
   Future<void> _saveFood() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -63,6 +81,7 @@ class _FoodFormScreenState extends State<FoodFormScreen> {
             backgroundColor: Colors.green,
           ),
         );
+
         Navigator.pop(context);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -75,6 +94,15 @@ class _FoodFormScreenState extends State<FoodFormScreen> {
           ),
         );
       }
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Terjadi kesalahan: $error'),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -84,18 +112,41 @@ class _FoodFormScreenState extends State<FoodFormScreen> {
     }
   }
 
-  String? _validateNumber(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Bagian ini wajib diisi';
-    }
-
-    final number = double.tryParse(value);
-
-    if (number == null || number < 0) {
-      return 'Masukkan angka yang valid (minimal 0)';
-    }
-
-    return null;
+  // Widget reusable untuk input form
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required bool isNumber,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF30283D),
+          ),
+        ),
+        const SizedBox(height: 8),
+        CustomTextField(
+          label: label,
+          hintText: hint,
+          controller: controller,
+          icon: isNumber ? Icons.numbers : Icons.restaurant,
+          isNumber: isNumber,
+          validator: isNumber
+              ? _validateNumber
+              : (value) {
+            if (value == null || value.trim().isEmpty) {
+              return 'Nama makanan wajib diisi';
+            }
+            return null;
+          },
+        ),
+      ],
+    );
   }
 
   @override
@@ -133,7 +184,6 @@ class _FoodFormScreenState extends State<FoodFormScreen> {
               hint: 'Contoh: Nasi Goreng',
               isNumber: false,
             ),
-
             const SizedBox(height: 16),
 
             _buildTextField(
@@ -142,7 +192,6 @@ class _FoodFormScreenState extends State<FoodFormScreen> {
               hint: 'Contoh: 250',
               isNumber: true,
             ),
-
             const SizedBox(height: 16),
 
             _buildTextField(
@@ -151,7 +200,6 @@ class _FoodFormScreenState extends State<FoodFormScreen> {
               hint: 'Contoh: 12',
               isNumber: true,
             ),
-
             const SizedBox(height: 16),
 
             _buildTextField(
@@ -160,7 +208,6 @@ class _FoodFormScreenState extends State<FoodFormScreen> {
               hint: 'Contoh: 35',
               isNumber: true,
             ),
-
             const SizedBox(height: 16),
 
             _buildTextField(
@@ -169,12 +216,14 @@ class _FoodFormScreenState extends State<FoodFormScreen> {
               hint: 'Contoh: 8',
               isNumber: true,
             ),
-
             const SizedBox(height: 16),
 
             const Text(
               'Meal Type',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF30283D),
+              ),
             ),
             const SizedBox(height: 8),
 
@@ -214,77 +263,17 @@ class _FoodFormScreenState extends State<FoodFormScreen> {
                 }
               },
             ),
-
             const SizedBox(height: 28),
 
-            SizedBox(
-              height: 52,
-              child: ElevatedButton(
-                onPressed: _isSaving ? null : _saveFood,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFF5A9C8),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                child: _isSaving
-                    ? const CircularProgressIndicator(
-                  color: Colors.white,
-                )
-                    : const Text(
-                  'Save Food',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
+            CustomButton(
+              text: 'Save Food',
+              icon: Icons.save,
+              isLoading: _isSaving,
+              onPressed: _saveFood,
             ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    required bool isNumber,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          keyboardType: isNumber
-              ? const TextInputType.numberWithOptions(decimal: true)
-              : TextInputType.text,
-          validator: isNumber
-              ? _validateNumber
-              : (value) {
-            if (value == null || value.trim().isEmpty) {
-              return 'Nama makanan wajib diisi';
-            }
-            return null;
-          },
-          decoration: InputDecoration(
-            hintText: hint,
-            filled: true,
-            fillColor: Colors.white,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide.none,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

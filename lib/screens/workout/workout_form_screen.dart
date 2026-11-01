@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/workout.dart';
 import 'package:provider/provider.dart';
 import '../../providers/workout_provider.dart';
+import '../../widgets/custom_button.dart';
 
 class WorkoutFormScreen extends StatefulWidget {
   final Workout? workout;
@@ -253,28 +254,11 @@ class _WorkoutFormScreenState extends State<WorkoutFormScreen> {
 
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isSaving ? null : _saveWorkout,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFF5A9C8),
-                    foregroundColor: const Color(0xFF30283D),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  child: _isSaving
-                      ? const SizedBox(
-                    height: 22,
-                    width: 22,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                    ),
-                  )
-                      : const Text(
-                    'Save Workout',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
+                child: CustomButton(
+                  text: widget.workout == null ? 'Save Workout' : 'Update Workout',
+                  icon: Icons.save,
+                  isLoading: _isSaving,
+                  onPressed: _saveWorkout,
                 ),
               ),
             ],
