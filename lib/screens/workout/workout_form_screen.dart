@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../models/workout.dart';
 import 'package:provider/provider.dart';
+import '../../models/workout.dart';
 import '../../providers/workout_provider.dart';
 import '../../widgets/custom_button.dart';
 
@@ -18,6 +18,20 @@ class WorkoutFormScreen extends StatefulWidget {
 }
 
 class _WorkoutFormScreenState extends State<WorkoutFormScreen> {
+  final _formKey = GlobalKey<FormState>();
+
+  final _exerciseController = TextEditingController();
+  final _muscleController = TextEditingController();
+  final _setsController = TextEditingController();
+  final _repsController = TextEditingController();
+  final _weightController = TextEditingController();
+  final _durationController = TextEditingController();
+
+  DateTime selectedDate = DateTime.now();
+  bool _isSaving = false;
+
+  bool get _isEditing => widget.workout != null;
+
   @override
   void initState() {
     super.initState();
@@ -35,17 +49,6 @@ class _WorkoutFormScreenState extends State<WorkoutFormScreen> {
       selectedDate = workout.workoutDate;
     }
   }
-  final _formKey = GlobalKey<FormState>();
-
-  final _exerciseController = TextEditingController();
-  final _muscleController = TextEditingController();
-  final _setsController = TextEditingController();
-  final _repsController = TextEditingController();
-  final _weightController = TextEditingController();
-  final _durationController = TextEditingController();
-
-  DateTime selectedDate = DateTime.now();
-  bool _isSaving = false;
 
   @override
   void dispose() {
@@ -66,14 +69,51 @@ class _WorkoutFormScreenState extends State<WorkoutFormScreen> {
       lastDate: DateTime.now(),
     );
 
-    if (date != null) {
+    if (date != null && mounted) {
       setState(() {
         selectedDate = date;
       });
     }
   }
 
+  String? _validateText(String? value, String label) {
+    if (value == null || value.trim().isEmpty) {
+      return '$label wajib diisi';
+    }
 
+    return null;
+  }
+
+  String? _validateInteger(
+      String? value,
+      String label,
+      ) {
+    if (value == null || value.trim().isEmpty) {
+      return '$label wajib diisi';
+    }
+
+    final number = int.tryParse(value);
+
+    if (number == null || number <= 0) {
+      return '$label harus berupa bilangan bulat lebih dari 0';
+    }
+
+    return null;
+  }
+
+  String? _validateWeight(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Weight wajib diisi';
+    }
+
+    final number = double.tryParse(value);
+
+    if (number == null || !number.isFinite || number < 0) {
+      return 'Masukkan berat yang valid (minimal 0)';
+    }
+
+    return null;
+  }
 
   Future<void> _saveWorkout() async {
     if (!_formKey.currentState!.validate()) return;
@@ -83,6 +123,7 @@ class _WorkoutFormScreenState extends State<WorkoutFormScreen> {
     });
 
     final workout = Workout(
+      id: widget.workout?.id,
       exerciseName: _exerciseController.text.trim(),
       muscleGroup: _muscleController.text.trim(),
       sets: int.parse(_setsController.text),
@@ -93,27 +134,22 @@ class _WorkoutFormScreenState extends State<WorkoutFormScreen> {
     );
 
     try {
-      final success = widget.workout == null
-          ? await context.read<WorkoutProvider>().addWorkout(workout)
-          : await context.read<WorkoutProvider>().updateWorkout(
-        Workout(
-          id: widget.workout!.id,
-          exerciseName: workout.exerciseName,
-          muscleGroup: workout.muscleGroup,
-          sets: workout.sets,
-          reps: workout.reps,
-          weight: workout.weight,
-          durationMinutes: workout.durationMinutes,
-          workoutDate: workout.workoutDate,
-        ),
-      );
+      final provider = context.read<WorkoutProvider>();
+
+      final success = _isEditing
+          ? await provider.updateWorkout(workout)
+          : await provider.addWorkout(workout);
 
       if (!mounted) return;
 
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Workout berhasil disimpan!'),
+          SnackBar(
+            content: Text(
+              _isEditing
+                  ? 'Workout berhasil diperbarui!'
+                  : 'Workout berhasil disimpan!',
+            ),
             backgroundColor: Colors.green,
           ),
         );
@@ -123,13 +159,22 @@ class _WorkoutFormScreenState extends State<WorkoutFormScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              context.read<WorkoutProvider>().errorMessage ??
+              provider.errorMessage ??
                   'Terjadi kesalahan saat menyimpan workout.',
             ),
             backgroundColor: Colors.red,
           ),
         );
       }
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal menyimpan workout: $error'),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -142,6 +187,7 @@ class _WorkoutFormScreenState extends State<WorkoutFormScreen> {
   Widget _buildTextField({
     required String label,
     required TextEditingController controller,
+    required String? Function(String?) validator,
     TextInputType keyboardType = TextInputType.text,
   }) {
     return Padding(
@@ -157,20 +203,7 @@ class _WorkoutFormScreenState extends State<WorkoutFormScreen> {
             borderRadius: BorderRadius.circular(14),
           ),
         ),
-        validator: (value) {
-          if (value == null || value.trim().isEmpty) {
-            return '$label wajib diisi';
-          }
-
-          if (keyboardType != TextInputType.text) {
-            final number = num.tryParse(value);
-            if (number == null || number < 0) {
-              return 'Masukkan angka yang valid';
-            }
-          }
-
-          return null;
-        },
+        validator: validator,
       ),
     );
   }
@@ -180,7 +213,9 @@ class _WorkoutFormScreenState extends State<WorkoutFormScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFFFF4F8),
       appBar: AppBar(
-        title: const Text('Add Workout'),
+        title: Text(
+          _isEditing ? 'Edit Workout' : 'Add Workout',
+        ),
         backgroundColor: const Color(0xFFF5A9C8),
       ),
       body: SingleChildScrollView(
@@ -199,41 +234,61 @@ class _WorkoutFormScreenState extends State<WorkoutFormScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              const Text('Keep track of your fitness progress!'),
+              const Text(
+                'Keep track of your fitness progress!',
+              ),
               const SizedBox(height: 24),
 
               _buildTextField(
                 label: 'Exercise Name',
                 controller: _exerciseController,
+                validator: (value) =>
+                    _validateText(value, 'Exercise Name'),
               ),
+
               _buildTextField(
                 label: 'Muscle Group',
                 controller: _muscleController,
+                validator: (value) =>
+                    _validateText(value, 'Muscle Group'),
               ),
+
               _buildTextField(
                 label: 'Sets',
                 controller: _setsController,
                 keyboardType: TextInputType.number,
+                validator: (value) =>
+                    _validateInteger(value, 'Sets'),
               ),
+
               _buildTextField(
                 label: 'Reps',
                 controller: _repsController,
                 keyboardType: TextInputType.number,
+                validator: (value) =>
+                    _validateInteger(value, 'Reps'),
               ),
+
               _buildTextField(
                 label: 'Weight (kg)',
                 controller: _weightController,
-                keyboardType: const TextInputType.numberWithOptions(
+                keyboardType:
+                const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
+                validator: _validateWeight,
               ),
+
               _buildTextField(
                 label: 'Duration (minutes)',
                 controller: _durationController,
                 keyboardType: TextInputType.number,
+                validator: (value) =>
+                    _validateInteger(value, 'Duration'),
               ),
 
               const SizedBox(height: 8),
+
               ListTile(
                 tileColor: Colors.white,
                 shape: RoundedRectangleBorder(
@@ -251,11 +306,14 @@ class _WorkoutFormScreenState extends State<WorkoutFormScreen> {
                 onTap: _selectDate,
               ),
 
+              const SizedBox(height: 24),
 
               SizedBox(
                 width: double.infinity,
                 child: CustomButton(
-                  text: widget.workout == null ? 'Save Workout' : 'Update Workout',
+                  text: _isEditing
+                      ? 'Update Workout'
+                      : 'Save Workout',
                   icon: Icons.save,
                   isLoading: _isSaving,
                   onPressed: _saveWorkout,
