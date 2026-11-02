@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../models/nutrition_goal.dart';
+import '../../providers/nutrition_goal_provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -13,6 +16,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _heightController = TextEditingController(text: '160');
 
   double _dailyCalories = 2000;
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  void initState() {
+    super.initState();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await context.read<NutritionGoalProvider>().loadNutritionGoal();
+
+      if (!mounted) return;
+
+      final goal = context.read<NutritionGoalProvider>().goal;
+
+      if (goal != null) {
+        setState(() {
+          _dailyCalories = goal.dailyCalories
+              .clamp(1000.0, 4000.0)
+              .toDouble();
+        });
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -22,11 +47,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.dispose();
   }
 
-  void _saveProfile() {
+  Future<void> _saveProfile() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final provider = context.read<NutritionGoalProvider>();
+
+    final goal = NutritionGoal(
+      id: provider.goal?.id,
+      dailyCalories: _dailyCalories,
+      proteinGoal: provider.goal?.proteinGoal ?? 100,
+      carbsGoal: provider.goal?.carbsGoal ?? 250,
+      fatGoal: provider.goal?.fatGoal ?? 65,
+    );
+
+    final success = await provider.saveNutritionGoal(goal);
+
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Profile berhasil diperbarui!'),
-        backgroundColor: Colors.green,
+      SnackBar(
+        content: Text(
+          success
+              ? 'Profile dan target berhasil diperbarui!'
+              : provider.errorMessage ?? 'Gagal menyimpan target.',
+        ),
+        backgroundColor: success ? Colors.green : Colors.red,
       ),
     );
   }
@@ -36,6 +81,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFFFF4F8),
       appBar: AppBar(
+        toolbarHeight:
+        MediaQuery.of(context).orientation == Orientation.landscape
+            ? 44
+            : 56,
         title: const Text(
           'My Profile',
           style: TextStyle(fontWeight: FontWeight.bold),
@@ -43,41 +92,85 @@ class _ProfileScreenState extends State<ProfileScreen> {
         backgroundColor: const Color(0xFFFFF4F8),
         elevation: 0,
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          // Profile Header
-          Center(
-            child: Column(
-              children: [
-                const CircleAvatar(
-                  radius: 48,
-                  backgroundColor: Color(0xFFFFE1EC),
-                  child: Icon(
-                    Icons.person,
-                    size: 55,
-                    color: Color(0xFFF5A9C8),
-                  ),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isLandscape =
+              MediaQuery.of(context).orientation ==
+                  Orientation.landscape;
+          final isWide = constraints.maxWidth >= 700;
+          final compact = isLandscape || isWide;
+
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1000),
+              child: SingleChildScrollView(
+                padding: EdgeInsets.all(compact ? 12 : 20),
+                child: compact
+                    ? Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: _buildProfileHeader(compact),
+                    ),
+                    const SizedBox(width: 20),
+                    Expanded(
+                      flex: 2,
+                      child: _buildProfileForm(compact),
+                    ),
+                  ],
+                )
+                    : Column(
+                  children: [
+                    _buildProfileHeader(compact),
+                    const SizedBox(height: 25),
+                    _buildProfileForm(compact),
+                  ],
                 ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Welcome to GLOWFIT!',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF30283D),
-                  ),
-                ),
-                const Text(
-                  'Your fitness journey starts here.',
-                  style: TextStyle(color: Colors.grey),
-                ),
-              ],
+              ),
             ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildProfileHeader(bool compact) {
+    return Column(
+      children: [
+        CircleAvatar(
+          radius: compact ? 34 : 48,
+          backgroundColor: const Color(0xFFFFE1EC),
+          child: Icon(
+            Icons.person,
+            size: compact ? 40 : 55,
+            color: const Color(0xFFF5A9C8),
           ),
+        ),
+        SizedBox(height: compact ? 8 : 12),
+        Text(
+          'Welcome to GLOWFIT!',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: compact ? 17 : 20,
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF30283D),
+          ),
+        ),
+        const Text(
+          'Your fitness journey starts here.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.grey),
+        ),
+      ],
+    );
+  }
 
-          const SizedBox(height: 30),
-
+  Widget _buildProfileForm(bool compact) {
+    return Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           const Text(
             'Personal Information',
             style: TextStyle(
@@ -85,17 +178,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
               fontWeight: FontWeight.bold,
             ),
           ),
-
           const SizedBox(height: 12),
-
           _buildField(
             label: 'Name',
             controller: _nameController,
             icon: Icons.person_outline,
           ),
-
           const SizedBox(height: 12),
-
           Row(
             children: [
               Expanded(
@@ -117,9 +206,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ],
           ),
-
-          const SizedBox(height: 28),
-
+          SizedBox(height: compact ? 18 : 28),
           const Text(
             'Daily Fitness Goals 🎯',
             style: TextStyle(
@@ -127,11 +214,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               fontWeight: FontWeight.bold,
             ),
           ),
-
-          const SizedBox(height: 15),
-
+          const SizedBox(height: 12),
           Container(
-            padding: const EdgeInsets.all(18),
+            padding: EdgeInsets.all(compact ? 14 : 18),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(18),
@@ -143,13 +228,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   'Daily Calories Target',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 Text(
                   '${_dailyCalories.toInt()} kcal',
-                  style: const TextStyle(
-                    fontSize: 24,
+                  style: TextStyle(
+                    fontSize: compact ? 20 : 24,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFFF5A9C8),
+                    color: const Color(0xFFF5A9C8),
                   ),
                 ),
                 Slider(
@@ -171,11 +256,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
           ),
-
-          const SizedBox(height: 25),
-
+          const SizedBox(height: 20),
           SizedBox(
-            height: 52,
+            width: double.infinity,
+            height: compact ? 46 : 52,
             child: ElevatedButton(
               onPressed: _saveProfile,
               style: ElevatedButton.styleFrom(
@@ -213,13 +297,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
-        TextField(
+        TextFormField(
           controller: controller,
           keyboardType: isNumber
               ? const TextInputType.numberWithOptions(decimal: true)
               : TextInputType.text,
+          validator: (value) {
+            if (value == null || value.trim().isEmpty) {
+              return '$label wajib diisi.';
+            }
+
+            if (isNumber) {
+              final number = double.tryParse(value);
+
+              if (number == null || number <= 0) {
+                return 'Masukkan angka yang valid.';
+              }
+            }
+
+            return null;
+          },
           decoration: InputDecoration(
-            prefixIcon: Icon(icon, color: const Color(0xFFF5A9C8)),
+            prefixIcon: Icon(
+              icon,
+              color: const Color(0xFFF5A9C8),
+            ),
             filled: true,
             fillColor: Colors.white,
             border: OutlineInputBorder(
