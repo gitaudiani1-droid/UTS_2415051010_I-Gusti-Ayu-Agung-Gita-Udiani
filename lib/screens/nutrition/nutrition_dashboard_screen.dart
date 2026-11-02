@@ -64,9 +64,12 @@ class _NutritionDashboardScreenState
 
     if (confirmed != true || !mounted) return;
 
+    final id = food.id;
+    if (id == null) return;
+
     final success = await context
         .read<NutritionProvider>()
-        .deleteFoodLog(food.id!);
+        .deleteFoodLog(id);
 
     if (!mounted) return;
 
@@ -78,8 +81,7 @@ class _NutritionDashboardScreenState
               : context.read<NutritionProvider>().errorMessage ??
               'Gagal menghapus food log.',
         ),
-        backgroundColor:
-        success ? Colors.green : Colors.red,
+        backgroundColor: success ? Colors.green : Colors.red,
       ),
     );
   }
@@ -89,6 +91,10 @@ class _NutritionDashboardScreenState
     return Scaffold(
       backgroundColor: const Color(0xFFFFF4F8),
       appBar: AppBar(
+        toolbarHeight:
+        MediaQuery.of(context).orientation == Orientation.landscape
+            ? 44
+            : 56,
         title: const Text(
           'Nutrition Tracker',
           style: TextStyle(fontWeight: FontWeight.bold),
@@ -96,294 +102,304 @@ class _NutritionDashboardScreenState
         backgroundColor: const Color(0xFFFFF4F8),
         elevation: 0,
       ),
-      body: Consumer<NutritionProvider>(
-        builder: (context, provider, child) {
-          final today = DateTime.now();
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isLandscape =
+              MediaQuery.of(context).orientation ==
+                  Orientation.landscape;
+          final isWide = constraints.maxWidth >= 700;
+          final compact = isLandscape || isWide;
 
-          final todayLogs = provider.foodLogs.where((food) {
-            return food.consumedAt.year == today.year &&
-                food.consumedAt.month == today.month &&
-                food.consumedAt.day == today.day;
-          }).toList();
+          return Consumer<NutritionProvider>(
+            builder: (context, provider, child) {
+              final today = DateTime.now();
 
-          final totalCalories = todayLogs.fold<double>(
-            0,
-                (sum, food) => sum + food.calories,
-          );
+              final todayLogs = provider.foodLogs.where((food) {
+                return food.consumedAt.year == today.year &&
+                    food.consumedAt.month == today.month &&
+                    food.consumedAt.day == today.day;
+              }).toList();
 
-          final totalProtein = todayLogs.fold<double>(
-            0,
-                (sum, food) => sum + food.protein,
-          );
+              final totalCalories = todayLogs.fold<double>(
+                0,
+                    (sum, food) => sum + food.calories,
+              );
 
-          final totalCarbs = todayLogs.fold<double>(
-            0,
-                (sum, food) => sum + food.carbohydrates,
-          );
+              final totalProtein = todayLogs.fold<double>(
+                0,
+                    (sum, food) => sum + food.protein,
+              );
 
-          final totalFat = todayLogs.fold<double>(
-            0,
-                (sum, food) => sum + food.fat,
-          );
+              final totalCarbs = todayLogs.fold<double>(
+                0,
+                    (sum, food) => sum + food.carbohydrates,
+              );
 
-          if (provider.isLoading && provider.foodLogs.isEmpty) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          }
+              final totalFat = todayLogs.fold<double>(
+                0,
+                    (sum, food) => sum + food.fat,
+              );
 
-          if (provider.errorMessage != null &&
-              provider.foodLogs.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.error_outline,
-                      size: 48,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(provider.errorMessage!),
-                    const SizedBox(height: 12),
-                    ElevatedButton(
-                      onPressed: provider.loadFoodLogs,
-                      child: const Text('Coba Lagi'),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
+              if (provider.isLoading && provider.foodLogs.isEmpty) {
+                return const Center(
+                  child: CircularProgressIndicator(),
+                );
+              }
 
-          return RefreshIndicator(
-            onRefresh: provider.loadFoodLogs,
-            child: ListView(
-              padding: const EdgeInsets.all(20),
-              children: [
-                const Text(
-                  'Your Daily Nutrition 💗',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF30283D),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Pantau asupan nutrisi harianmu.',
-                  style: TextStyle(color: Colors.grey),
-                ),
-                const SizedBox(height: 20),
-
-                // Total Calories
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [
-                        Color(0xFFF5A9C8),
-                        Color(0xFFA99BEF),
+              if (provider.errorMessage != null &&
+                  provider.foodLogs.isEmpty) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          size: 48,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(provider.errorMessage!),
+                        const SizedBox(height: 12),
+                        ElevatedButton(
+                          onPressed: provider.loadFoodLogs,
+                          child: const Text('Coba Lagi'),
+                        ),
                       ],
                     ),
-                    borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Column(
-                    crossAxisAlignment:
-                    CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Total Calories',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        '${totalCalories.toStringAsFixed(0)} kcal',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 30,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const Text(
-                        'Total kalori yang dikonsumsi hari ini',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ],
-                  ),
-                ),
+                );
+              }
 
-                const SizedBox(height: 20),
-
-                const Text(
-                  'Macronutrients',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF30283D),
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                GridView.count(
-                  crossAxisCount: 2,
-                  shrinkWrap: true,
-                  physics:
-                  const NeverScrollableScrollPhysics(),
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 1.7,
-                  children: [
-                    _nutritionCard(
-                      'Protein',
-                      totalProtein,
-                      'g',
-                      const Color(0xFFA99BEF),
+              return RefreshIndicator(
+                onRefresh: provider.loadFoodLogs,
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxWidth: 1100,
                     ),
-                    _nutritionCard(
-                      'Carbs',
-                      totalCarbs,
-                      'g',
-                      const Color(0xFF5795F5),
-                    ),
-                    _nutritionCard(
-                      'Fat',
-                      totalFat,
-                      'g',
-                      const Color(0xFFF5A9C8),
-                    ),
-                    _nutritionCard(
-                      'Food Logs',
-                      todayLogs.length.toDouble(),
-                      'items',
-                      const Color(0xFFA8E6CF),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 24),
-
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton.icon(
-                    onPressed: () => _openFoodForm(),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Add Food'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                      const Color(0xFFF5A9C8),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius:
-                        BorderRadius.circular(16),
-                      ),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                const Text(
-                  "Today's Food Logs",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF30283D),
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                if (todayLogs.isEmpty)
-                  const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Text(
-                        'Belum ada catatan makanan hari ini.',
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  )
-                else
-                  ...todayLogs.map(
-                        (food) => Card(
-                      color: Colors.white,
-                      child: ListTile(
-                        leading: const CircleAvatar(
-                          backgroundColor: Color(0xFFFFE1EC),
-                          child: Icon(
-                            Icons.restaurant,
-                            color: Color(0xFFF5A9C8),
-                          ),
-                        ),
-                        title: Text(
-                          food.foodName,
-                          style: const TextStyle(
+                    child: ListView(
+                      padding: EdgeInsets.all(compact ? 12 : 20),
+                      children: [
+                        Text(
+                          'Your Daily Nutrition 💗',
+                          style: TextStyle(
+                            fontSize: compact ? 19 : 22,
                             fontWeight: FontWeight.bold,
+                            color: const Color(0xFF30283D),
                           ),
                         ),
-                        subtitle: Text(
-                          '${food.mealType} • '
-                              '${food.protein.toStringAsFixed(0)}g protein',
+                        SizedBox(height: compact ? 3 : 6),
+                        Text(
+                          'Pantau asupan nutrisi harianmu.',
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontSize: compact ? 12 : 14,
+                          ),
                         ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              '${food.calories.toStringAsFixed(0)} kcal',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
+                        SizedBox(height: compact ? 12 : 20),
+
+                        if (compact)
+                          Row(
+                            crossAxisAlignment:
+                            CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                flex: 4,
+                                child: _calorieCard(
+                                  totalCalories,
+                                  compact: true,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                flex: 5,
+                                child: _macroSection(
+                                  totalProtein,
+                                  totalCarbs,
+                                  totalFat,
+                                  todayLogs.length,
+                                  compact: true,
+                                ),
+                              ),
+                            ],
+                          )
+                        else ...[
+                          _calorieCard(totalCalories),
+                          const SizedBox(height: 20),
+                          _macroSection(
+                            totalProtein,
+                            totalCarbs,
+                            totalFat,
+                            todayLogs.length,
+                          ),
+                        ],
+
+                        SizedBox(height: compact ? 14 : 24),
+
+                        SizedBox(
+                          width: double.infinity,
+                          height: compact ? 44 : 52,
+                          child: ElevatedButton.icon(
+                            onPressed: () => _openFoodForm(),
+                            icon: const Icon(Icons.add),
+                            label: const Text('Add Food'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                              const Color(0xFFF5A9C8),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius:
+                                BorderRadius.circular(16),
                               ),
                             ),
-                            PopupMenuButton<String>(
-                              onSelected: (value) {
-                                if (value == 'edit') {
-                                  _openFoodForm(food: food);
-                                } else if (value == 'delete') {
-                                  _deleteFood(food);
-                                }
-                              },
-                              itemBuilder: (context) => [
-                                const PopupMenuItem(
-                                  value: 'edit',
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.edit, size: 18),
-                                      SizedBox(width: 8),
-                                      Text('Edit'),
-                                    ],
-                                  ),
-                                ),
-                                const PopupMenuItem(
-                                  value: 'delete',
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        Icons.delete,
-                                        color: Colors.red,
-                                        size: 18,
-                                      ),
-                                      SizedBox(width: 8),
-                                      Text('Hapus'),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
+
+                        SizedBox(height: compact ? 14 : 24),
+
+                        Text(
+                          "Today's Food Logs",
+                          style: TextStyle(
+                            fontSize: compact ? 16 : 18,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF30283D),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+
+                        if (todayLogs.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.all(24),
+                            child: Text(
+                              'Belum ada catatan makanan hari ini.',
+                              textAlign: TextAlign.center,
+                            ),
+                          )
+                        else
+                          ...todayLogs.map(
+                                (food) => _foodLogCard(food),
+                          ),
+                      ],
                     ),
                   ),
-              ],
-            ),
+                ),
+              );
+            },
           );
         },
       ),
+    );
+  }
+
+  Widget _calorieCard(
+      double totalCalories, {
+        bool compact = false,
+      }) {
+    return Container(
+      padding: EdgeInsets.all(compact ? 14 : 20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFFF5A9C8),
+            Color(0xFFA99BEF),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Total Calories',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: compact ? 13 : 16,
+            ),
+          ),
+          SizedBox(height: compact ? 6 : 10),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              '${totalCalories.toStringAsFixed(0)} kcal',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: compact ? 25 : 30,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          Text(
+            'Total kalori yang dikonsumsi hari ini',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: compact ? 10 : 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _macroSection(
+      double protein,
+      double carbs,
+      double fat,
+      int foodCount, {
+        bool compact = false,
+      }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Macronutrients',
+          style: TextStyle(
+            fontSize: compact ? 15 : 18,
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF30283D),
+          ),
+        ),
+        SizedBox(height: compact ? 8 : 12),
+        GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisSpacing: compact ? 8 : 12,
+          mainAxisSpacing: compact ? 8 : 12,
+          childAspectRatio: compact ? 2.0 : 1.7,
+          children: [
+            _nutritionCard(
+              'Protein',
+              protein,
+              'g',
+              const Color(0xFFA99BEF),
+              compact: compact,
+            ),
+            _nutritionCard(
+              'Carbs',
+              carbs,
+              'g',
+              const Color(0xFF5795F5),
+              compact: compact,
+            ),
+            _nutritionCard(
+              'Fat',
+              fat,
+              'g',
+              const Color(0xFFF5A9C8),
+              compact: compact,
+            ),
+            _nutritionCard(
+              'Food Logs',
+              foodCount.toDouble(),
+              'items',
+              const Color(0xFFA8E6CF),
+              compact: compact,
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -391,10 +407,11 @@ class _NutritionDashboardScreenState
       String title,
       double value,
       String unit,
-      Color color,
-      ) {
+      Color color, {
+        bool compact = false,
+      }) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: EdgeInsets.all(compact ? 10 : 14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -405,21 +422,96 @@ class _NutritionDashboardScreenState
         children: [
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               color: Colors.grey,
-              fontSize: 13,
+              fontSize: compact ? 11 : 13,
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            '${value.toStringAsFixed(0)} $unit',
-            style: TextStyle(
-              color: color,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
+          SizedBox(height: compact ? 4 : 8),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              '${value.toStringAsFixed(0)} $unit',
+              style: TextStyle(
+                color: color,
+                fontSize: compact ? 16 : 20,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _foodLogCard(FoodLog food) {
+    return Card(
+      color: Colors.white,
+      child: ListTile(
+        leading: const CircleAvatar(
+          backgroundColor: Color(0xFFFFE1EC),
+          child: Icon(
+            Icons.restaurant,
+            color: Color(0xFFF5A9C8),
+          ),
+        ),
+        title: Text(
+          food.foodName,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        subtitle: Text(
+          '${food.mealType} • '
+              '${food.protein.toStringAsFixed(0)}g protein',
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '${food.calories.toStringAsFixed(0)} kcal',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            PopupMenuButton<String>(
+              onSelected: (value) {
+                if (value == 'edit') {
+                  _openFoodForm(food: food);
+                } else if (value == 'delete') {
+                  _deleteFood(food);
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'edit',
+                  child: Row(
+                    children: [
+                      Icon(Icons.edit, size: 18),
+                      SizedBox(width: 8),
+                      Text('Edit'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.delete,
+                        color: Colors.red,
+                        size: 18,
+                      ),
+                      SizedBox(width: 8),
+                      Text('Hapus'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
