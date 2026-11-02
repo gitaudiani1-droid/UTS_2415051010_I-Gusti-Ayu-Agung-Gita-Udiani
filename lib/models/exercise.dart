@@ -17,6 +17,23 @@ class Exercise {
     this.imageUrl,
   });
 
+  // Membersihkan tag HTML dari instruksi API.
+  static String cleanHtml(String? html) {
+    if (html == null || html.isEmpty) return '';
+
+    return html
+        .replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n')
+        .replaceAll(RegExp(r'</p>', caseSensitive: false), '\n\n')
+        .replaceAll(RegExp(r'<[^>]*>'), '')
+        .replaceAll('&nbsp;', ' ')
+        .replaceAll('&amp;', '&')
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&#39;', "'")
+        .trim();
+  }
+
   factory Exercise.fromJson(Map<String, dynamic> json) {
     final translations = json['translations'] as List? ?? [];
 
@@ -47,7 +64,9 @@ class Exercise {
           .map((item) => item['name'] ?? '')
           .where((name) => name.toString().isNotEmpty)
           .join(', '),
-      instructions: translation['description'] ?? '',
+      instructions: cleanHtml(
+        translation['description']?.toString(),
+      ),
       imageUrl: image is Map ? image['image']?.toString() : null,
     );
   }
