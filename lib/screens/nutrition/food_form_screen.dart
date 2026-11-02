@@ -149,34 +149,22 @@ class _FoodFormScreenState extends State<FoodFormScreen> {
     }
   }
 
+
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
     required String hint,
     required bool isNumber,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF30283D),
-          ),
-        ),
-        const SizedBox(height: 8),
-        CustomTextField(
-          label: label,
-          hintText: hint,
-          controller: controller,
-          icon: isNumber ? Icons.numbers : Icons.restaurant,
-          isNumber: isNumber,
-          validator: isNumber
-              ? _validateNumber
-              : _validateFoodName,
-        ),
-      ],
+    return CustomTextField(
+      label: label,
+      hintText: hint,
+      controller: controller,
+      icon: isNumber ? Icons.numbers : Icons.restaurant,
+      isNumber: isNumber,
+      validator: isNumber
+          ? _validateNumber
+          : _validateFoodName,
     );
   }
 
