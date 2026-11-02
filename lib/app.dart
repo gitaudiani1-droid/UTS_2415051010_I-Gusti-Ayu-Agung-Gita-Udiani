@@ -13,6 +13,7 @@ import 'screens/main_navigation_screen.dart';
 import 'providers/nutrition_goal_provider.dart';
 import 'repositories/nutrition_goal_repository.dart';
 import 'services/nutrition_goal_service.dart';
+import 'theme/app_theme.dart';
 
 class GlowFitApp extends StatelessWidget {
   const GlowFitApp({super.key});
@@ -53,14 +54,7 @@ class GlowFitApp extends StatelessWidget {
       child: MaterialApp(
         title: 'GLOWFIT',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFFF5A9C8),
-            brightness: Brightness.light,
-          ),
-          scaffoldBackgroundColor: const Color(0xFFFFF4F8),
-        ),
+        theme: AppTheme.lightTheme,
         home: const MainNavigationScreen(),
       ),
     );
