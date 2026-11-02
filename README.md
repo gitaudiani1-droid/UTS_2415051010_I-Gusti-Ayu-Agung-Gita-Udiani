@@ -94,3 +94,26 @@ GLOWFIT menggunakan Supabase dengan tabel:
 I Gusti Ayu Agung Gita Udiani
 
 Project Ujian Tengah Semester (UTS).
+
+## Tampilan Aplikasi 
+
+### 1. Home Dashboard
+![Home Dashboard](screenshots/home.png)
+
+### 2. Workout Library
+![Workout Library](screenshots/workout_library.png)
+
+### 3. Exercise Detail
+![Exercise Detail](screenshots/exercise_detail.png)
+
+### 4. Workout History
+![Workout History](screenshots/workout_history.png)
+
+### 5. Nutrition Dashboard
+![Nutrition Dashboard](screenshots/nutrition_dashboard.png)
+
+### 6. Food Form
+![Food Form](screenshots/food_form.png)
+
+### 7. Profile & Goals 
+![Profile & Goals](screenshots/profile_goals.png)
